@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sudoku 9x9 Pro</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#000;
+  color:#fff;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+
+.container{
+  width:95vw;
+  max-width:500px;
+  text-align:center;
+}
+
+h1{
+  margin:10px 0;
+}
+
+.info{
+  display:flex;
+  justify-content:space-between;
+  font-size:14px;
+  margin-bottom:10px;
+}
+
+.board{
+  display:grid;
+  grid-template-columns:repeat(9,1fr);
+  gap:4px;
+}
+
+input{
+  width:100%;
+  aspect-ratio:1/1;
+  text-align:center;
+  font-size:18px;
+  border:none;
+  border-radius:6px;
+  background:#111;
+  color:#fff;
+  transition:.2s ease;
+}
+
+input:focus{
+  outline:none;
+  background:#222;
+  transform:scale(1.08);
+  box-shadow:0 0 10px #22c55e;
+}
+
+.fixed{
+  background:#1f1f1f;
+  font-weight:bold;
+}
+
+.correct{
+  background:#064e3b;
+  animation:pop .3s ease;
+}
+
+.wrong{
+  background:#7f1d1d;
+  animation:shake .3s ease;
+}
+
+button{
+  margin-top:10px;
+  padding:10px;
+  width:100%;
+  border:none;
+  border-radius:8px;
+  background:#22c55e;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+@keyframes pop{
+  0%{transform:scale(.8);}
+  100%{transform:scale(1);}
+}
+
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  25%{transform:translateX(-3px);}
+  75%{transform:translateX(3px);}
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Sudoku 9x9 🧠</h1>
+  <div class="info">
+    <div>⏱ <span id="timer">0</span>s</div>
+    <div>🏆 Best: <span id="best">-</span>s</div>
+  </div>
+  <div class="board" id="board"></div>
+  <button onclick="checkSudoku()">Cek Jawaban</button>
+  <button onclick="newGame()">Game Baru</button>
+</div>
+
+<script>
+const boardEl=document.getElementById("board");
+const timerEl=document.getElementById("timer");
+const bestEl=document.getElementById("best");
+
+let solution=[];
+let puzzle=[];
+let time=0;
+let timerInterval;
+
+function startTimer(){
+  clearInterval(timerInterval);
+  time=0;
+  timerEl.textContent=0;
+  timerInterval=setInterval(()=>{
+    time++;
+    timerEl.textContent=time;
+  },1000);
+}
+
+function loadBest(){
+  const best=localStorage.getItem("sudoku9_best");
+  if(best) bestEl.textContent=best;
+}
+
+function saveBest(){
+  const best=localStorage.getItem("sudoku9_best");
+  if(!best || time<best){
+    localStorage.setItem("sudoku9_best",time);
+    bestEl.textContent=time;
+  }
+}
+
+// Generate full valid sudoku
+function generateSudoku(){
+  const base=3;
+  const side=base*base;
+
+  function pattern(r,c){return (base*(r%base)+Math.floor(r/base)+c)%side;}
+  function shuffle(arr){return arr.sort(()=>Math.random()-0.5);}
+
+  const rBase=[0,1,2];
+  const rows=[].concat(...shuffle(rBase).map(g=>shuffle(rBase).map(r=>g*base+r)));
+  const cols=[].concat(...shuffle(rBase).map(g=>shuffle(rBase).map(c=>g*base+c)));
+  const nums=shuffle([1,2,3,4,5,6,7,8,9]);
+
+  solution=rows.map(r=>cols.map(c=>nums[pattern(r,c)]));
+
+  puzzle=solution.map(row=>row.slice());
+
+  // remove numbers randomly
+  let squares=81;
+  let remove=45;
+  while(remove>0){
+    let r=Math.floor(Math.random()*9);
+    let c=Math.floor(Math.random()*9);
+    if(puzzle[r][c]!== ""){
+      puzzle[r][c]="";
+      remove--;
+    }
+  }
+}
+
+function drawBoard(){
+  boardEl.innerHTML="";
+  for(let r=0;r<9;r++){
+    for(let c=0;c<9;c++){
+      const cell=document.createElement("input");
+      cell.type="number";
+      cell.min=1;
+      cell.max=9;
+
+      if(puzzle[r][c]!=""){
+        cell.value=puzzle[r][c];
+        cell.disabled=true;
+        cell.classList.add("fixed");
+      }
+
+      boardEl.appendChild(cell);
+    }
+  }
+}
+
+function checkSudoku(){
+  const inputs=document.querySelectorAll("input");
+  let index=0;
+  let win=true;
+
+  for(let r=0;r<9;r++){
+    for(let c=0;c<9;c++){
+      const val=parseInt(inputs[index].value);
+      inputs[index].classList.remove("correct","wrong");
+
+      if(!inputs[index].disabled){
+        if(val===solution[r][c]){
+          inputs[index].classList.add("correct");
+        }else{
+          inputs[index].classList.add("wrong");
+          win=false;
+        }
+      }
+      index++;
+    }
+  }
+
+  if(win){
+    clearInterval(timerInterval);
+    saveBest();
+    setTimeout(()=>{
+      alert("🔥 Selamat! Sudoku Selesai!");
+    },300);
+  }
+}
+
+function newGame(){
+  generateSudoku();
+  drawBoard();
+  startTimer();
+}
+
+loadBest();
+newGame();
+</script>
+
+</body>
+</html>
